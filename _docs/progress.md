@@ -47,14 +47,34 @@ step — append, don't rewrite history.
 - Backfilled `backlog.md` (repo root) retrospectively for Homework 1
   Question 4 — kept local/uncommitted per user request as of this entry.
 
+- Phase 7 — `chores/tests.py`: 31 tests covering `Membership.is_admin`,
+  `Task.is_overdue`, all of `chores/permissions.py`, and all of
+  `chores/lifecycle.py` (start/drop, block/unblock, complete/approve
+  gating, recurring regeneration). All passing via
+  `uv run python manage.py test`. Done ahead of Phases 5-6 since those
+  are blocked on open decisions and Homework 1's own flow goes straight
+  from "implement a few backlog items" to "add tests."
+- Reviewed the test suite for gaps (not just pass/fail); added 6 tests
+  closing real holes: per-household scoping of `is_admin`/
+  `is_available_for_assignment` (verified via mutation testing — briefly
+  broke the household filter and confirmed these two tests catch it),
+  `unblock_task`'s no-assignee branch, P2P ignoring `requires_approval`
+  end-to-end through `complete_task`, `start_task` propagating
+  `PermissionDenied` for an away user, recurring regeneration via the
+  `approve_task` path, and `Membership`'s `unique_together` constraint.
+  Open design question (not yet resolved): `complete_task` takes an
+  unused `actor` param and `drop_task`/`block_task` take none at all —
+  currently *any* user can complete/drop/block *any* task, with no
+  authorization check. Deliberately not fixed yet — deferred until
+  Phase 5/6 define how a caller's identity is actually supplied.
+
 ## In progress
 
-- (nothing in progress — Phase 5 not yet started)
+- (nothing in progress)
 
 ## Not started
 - Phase 5 — Interface layer (pending open decision)
 - Phase 6 — Auth (pending open decision)
-- Phase 7 — Tests
 - Phase 8 — Stretch: CI & deployment
 
 ## Notes / gotchas for future sessions
@@ -63,4 +83,3 @@ step — append, don't rewrite history.
   (non-login interactive shells). In Claude Code's Bash tool, prefix
   commands with `export PATH="$HOME/.local/bin:$PATH"` if `uv` isn't
   found.
-- Nothing has been committed for the Django app yet as of this entry.
