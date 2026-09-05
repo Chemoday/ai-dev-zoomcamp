@@ -27,13 +27,31 @@ step — append, don't rewrite history.
   `chores/admin.py`. Migration `chores/0001_initial.py` generated and
   applied. `manage.py check` passes.
 
+- Phase 3 — `chores/permissions.py` added: `is_admin`/`require_admin`
+  (role checks), `task_requires_admin_approval` (P2P ignores per-task
+  `requires_approval`, Hierarchical honors it), `is_available_for_assignment`
+  + `assign_task` (excludes `is_away` members). `Membership.is_admin`
+  property added to the model (no migration needed — not a DB field).
+  Manually smoke-tested via `manage.py shell`, not yet covered by
+  `manage.py test` (deferred to Phase 7).
+
+- Phase 4 — `chores/lifecycle.py` added: `start_task`/`drop_task`
+  (assign/unassign pool cycle), `block_task`/`unblock_task` (required
+  reason), `complete_task`/`approve_task` (uses
+  `permissions.task_requires_admin_approval` to gate on `awaiting_approval`),
+  recurring regeneration on completion (`interval_days`), and
+  `Task.is_overdue` computed property. Added `Task.awaiting_approval`
+  field + migration `0002_task_awaiting_approval`. Manually
+  smoke-tested via `manage.py shell`, not yet covered by `manage.py
+  test` (deferred to Phase 7).
+- Backfilled `backlog.md` (repo root) retrospectively for Homework 1
+  Question 4 — kept local/uncommitted per user request as of this entry.
+
 ## In progress
 
-- (nothing in progress — Phase 3 not yet started)
+- (nothing in progress — Phase 5 not yet started)
 
 ## Not started
-- Phase 3 — Governance & permission rules
-- Phase 4 — Task lifecycle mechanics
 - Phase 5 — Interface layer (pending open decision)
 - Phase 6 — Auth (pending open decision)
 - Phase 7 — Tests

@@ -29,8 +29,8 @@ class ZoneAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ("title", "zone", "assignee", "status", "deadline", "is_recurring")
-    list_filter = ("status", "is_recurring", "requires_approval", "zone__household")
+    list_display = ("title", "zone", "assignee", "status", "awaiting_approval", "deadline", "is_recurring")
+    list_filter = ("status", "is_recurring", "requires_approval", "awaiting_approval", "zone__household")
     inlines = [SubTaskInline]
 
 

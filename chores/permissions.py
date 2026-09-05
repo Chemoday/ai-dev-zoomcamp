@@ -1,0 +1,48 @@
+"""Governance rules shared by any interface layer (admin, views, or API).
+
+Kept independent of Task's lifecycle methods (Phase 4) and of whatever
+interface layer Phase 5 ends up using, so both can call into the same
+rules without duplicating them.
+"""
+
+from .models import Household, Membership
+
+
+class PermissionDenied(Exception):
+    pass
+
+
+def get_membership(user, household):
+    return Membership.objects.filter(user=user, household=household).first()
+
+
+def is_admin(user, household) -> bool:
+    membership = get_membership(user, household)
+    return bool(membership and membership.is_admin)
+
+
+def require_admin(user, household):
+    if not is_admin(user, household):
+        raise PermissionDenied(f"{user} is not an admin of {household}")
+
+
+def task_requires_admin_approval(task) -> bool:
+    """P2P households have equal permissions, so a task's own
+    ``requires_approval`` flag is only honored in Hierarchical households.
+    """
+    household = task.zone.household
+    return task.requires_approval and household.mode == Household.Mode.HIERARCHICAL
+
+
+def is_available_for_assignment(user, household) -> bool:
+    membership = get_membership(user, household)
+    return bool(membership and not membership.is_away)
+
+
+def assign_task(task, user):
+    household = task.zone.household
+    if not is_available_for_assignment(user, household):
+        raise PermissionDenied(f"{user} is away or not a member of {household}")
+    task.assignee = user
+    task.save(update_fields=["assignee"])
+    return task

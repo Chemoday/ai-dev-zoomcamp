@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Household(models.Model):
@@ -30,6 +31,10 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user} @ {self.household} ({self.role})"
+
+    @property
+    def is_admin(self):
+        return self.role == self.Role.ADMIN
 
 
 class Zone(models.Model):
@@ -62,6 +67,7 @@ class Task(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO)
     blocked_reason = models.CharField(max_length=255, blank=True)
     requires_approval = models.BooleanField(default=False)
+    awaiting_approval = models.BooleanField(default=False)
     is_recurring = models.BooleanField(default=False)
     interval_days = models.PositiveIntegerField(null=True, blank=True)
     deadline = models.DateTimeField(null=True, blank=True)
@@ -70,6 +76,12 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_overdue(self):
+        if self.deadline is None or self.status == self.Status.DONE:
+            return False
+        return self.deadline < timezone.now()
 
 
 class SubTask(models.Model):
