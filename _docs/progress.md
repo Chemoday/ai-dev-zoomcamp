@@ -72,9 +72,70 @@ step — append, don't rewrite history.
 
 - (nothing in progress)
 
+- Phase 5/6 — DRF API + TokenAuthentication (2026-09-07). Added
+  `djangorestframework` dependency; `rest_framework` +
+  `rest_framework.authtoken` in `INSTALLED_APPS`; migrated (creates the
+  authtoken table). Note: in the installed DRF version (3.18.0),
+  `TokenAuthentication` lives at `rest_framework.authentication.
+  TokenAuthentication`, not under `rest_framework.authtoken.authentication`
+  — the latter path doesn't exist and raises an `ImportError` on
+  `manage.py migrate`/`runserver`.
+  - Closed the deferred authorization gap: added
+    `permissions.can_manage_task(user, task)` (assignee or admin may act
+    on a claimed task; any member may act on an unclaimed one) and wired
+    it into `lifecycle.drop_task`/`block_task`/`unblock_task` (new
+    required `actor` param — breaking signature change) and
+    `complete_task` (previously-unused `actor` param now enforced).
+    Existing `chores/tests.py` calls updated for the new signatures; 7
+    new tests added to `LifecycleTests` covering non-assignee rejection
+    and admin override for each of the four functions.
+  - `chores/serializers.py` (new): one `ModelSerializer` per model.
+    `Task.status`/`blocked_reason`/`awaiting_approval`/`assignee` are
+    read-only (only change via lifecycle actions). `validate_<fk>`
+    methods on Zone/Task/SubTask/Membership reject attaching to a
+    household the requester isn't a member of.
+    `MembershipSerializer.validate` requires admin for role changes or
+    changing someone else's `is_away`.
+  - `chores/views.py` (replaced stub): `ModelViewSet` per model,
+    querysets scoped to the requester's households via a
+    `_household_ids(user)` helper. `HouseholdViewSet.perform_create`
+    auto-creates an ADMIN `Membership` for the creator.
+    `TaskViewSet` adds `start`/`drop`/`block`/`unblock`/`complete`/
+    `approve` `@action` endpoints, each delegating straight to
+    `lifecycle.*` via a shared `_lifecycle_response` helper mapping
+    `InvalidTransition`/`ValueError` → 400 and `PermissionDenied` → 403.
+    An object outside the caller's households is 404 (queryset scoping),
+    never 403.
+  - `chores/urls.py` (new): `DefaultRouter` under `/api/`. `config/urls.py`
+    wires it in plus `POST /api/token/` (DRF's `obtain_auth_token`).
+  - `chores/test_api.py` (new): `APITestCase`-based — auth
+    (401/token-success/token-failure), household scoping (list filtering,
+    404 across households, creator-becomes-admin), and full task
+    lifecycle via HTTP (start/drop/block/unblock/complete/approve happy
+    paths, wrong-actor 403, wrong-state 400, P2P vs Hierarchical approval
+    gating end-to-end).
+  - All 58 tests pass (`uv run python manage.py test`). Manually
+    smoke-tested the full happy path via `runserver` + `curl`: token →
+    create household (creator auto-admin) → zone → task → start →
+    complete → DONE; confirmed a user outside the household gets 404 on
+    that task. Smoke-test users/data cleaned up afterward.
+  - Style cleanup pass (same day, after user review request): replaced
+    the 5 hand-written `get_queryset()`s + `_household_ids` helper in
+    `chores/views.py` with a `HouseholdScopedMixin` (`household_lookup`
+    class attr per viewset) plus `queryset = Model.objects.all()` on
+    each viewset; replaced the lambda + `_lifecycle_response` pattern in
+    `TaskViewSet`'s six lifecycle actions with a `_lifecycle_action`
+    decorator, so each action body is a single call into `lifecycle.py`.
+    Extracted a shared `_require_membership` helper in
+    `chores/serializers.py` to de-duplicate the four `validate_<fk>`
+    household-membership checks. Confirmed `Task.blocked_reason` was
+    already a free-text `CharField` with no hardcoded choices (a chat
+    misreading, not a real issue) — no change needed there. All 58 tests
+    still pass after the refactor; re-smoke-tested start/block/complete
+    via `runserver` + `curl` to confirm the decorator/mixin behave
+    identically at runtime.
+
 ## Not started
-- Phase 5 — Interface layer (pending open decision)
-- Phase 6 — Auth (pending open decision)
 - Phase 8 — Stretch: CI & deployment
 
 ## Notes / gotchas for future sessions

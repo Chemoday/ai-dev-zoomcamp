@@ -21,16 +21,19 @@ level rather than listing every line of code.
 
 ## Open decisions (resolve before/while building the relevant phase)
 
-1. **API vs templates vs admin-only** — README calls this a "backend
-   service," which leans toward an API (Django REST Framework), but
-   the homework itself doesn't require one. Default assumption for
-   Phase 1–4: build models + Django admin registration only, so the
-   app is usable and testable without committing to an interface. Add
-   DRF (or templates) explicitly in a later phase once that's decided.
-2. **Auth** — session auth vs token/JWT is undecided. Django's built-in
-   `User` model is used regardless (per the data model in README), so
-   this only affects how a future API authenticates requests. Doesn't
-   block Phases 1–4.
+1. **API vs templates vs admin-only** — Resolved: DRF API, deferred.
+   Django admin remains the only interface for now (models + admin
+   registration from Phase 2); Phase 5 will add DRF serializers/viewsets
+   when picked back up. Note: editing `Task.status` directly in the
+   admin bypasses `chores/lifecycle.py` (no approval gating, no
+   recurring regeneration) — acceptable for now, but worth adding
+   custom admin actions wired to `lifecycle.py` if the admin ends up
+   being used as more than a quick data-inspection tool before DRF
+   lands.
+2. **Auth** — Resolved: DRF `TokenAuthentication` (not JWT/Basic) —
+   simplest fit for project scope, no expiry/refresh complexity needed.
+   Implemented in Phase 6. Django's built-in `User` model is used
+   regardless.
 3. **Deployment target** — GitHub hosts the code, not a running Django
    process (GitHub Pages is static-only). If/when deployment is
    wanted, pick a host (Render/Railway/Fly.io free tier are common
@@ -85,17 +88,32 @@ before any custom views exist. Migrate.
 - Verification flow: instant-complete vs admin-approval, driven by
   `requires_approval`.
 
-## Phase 5 — Interface layer (pending Open Decision #1)
+## Phase 5 — Interface layer — Done
 
-Once decided, implement whichever of:
-- Django admin only (already covered by Phase 2, nothing further), or
-- Server-rendered views/templates for the above actions, or
-- DRF serializers + viewsets exposing the same actions as an API.
+DRF serializers (`chores/serializers.py`) + `ModelViewSet`s
+(`chores/views.py`) for all 5 models, routed under `/api/` via
+`chores/urls.py` + a `DefaultRouter`. Task lifecycle actions exposed as
+`@action` endpoints (`start`/`drop`/`block`/`unblock`/`complete`/`approve`)
+that delegate to `chores/lifecycle.py` — views contain no
+authorization/state-machine logic of their own. Querysets scoped to the
+requesting user's households (`Membership` lookup); an object outside the
+caller's households returns 404, not 403. `Task` fields that only change
+via lifecycle actions (`status`, `blocked_reason`, `awaiting_approval`,
+`assignee`) are read-only on the serializer.
 
-## Phase 6 — Auth (pending Open Decision #2)
+As part of this, closed a previously-deferred gap: `lifecycle.drop_task`/
+`block_task`/`unblock_task` took no caller identity, and `complete_task`'s
+`actor` param was unused. Added `permissions.can_manage_task(user, task)`
+(assignee or admin may act on a claimed task; any member may act on an
+unclaimed one) and now enforce it first in all four functions.
 
-- Wire up whichever auth mechanism is chosen for anything beyond the
-  Django admin (which already uses Django's built-in auth).
+## Phase 6 — Auth — Done
+
+DRF `TokenAuthentication` (`rest_framework.authtoken`) + `SessionAuthentication`
+(dev/browsable-API only). Login via `POST /api/token/` (DRF's built-in
+`obtain_auth_token`) → `{"token": "..."}`; clients send
+`Authorization: Token <token>`. Global default permission class is
+`IsAuthenticated`.
 
 ## Phase 7 — Tests
 
