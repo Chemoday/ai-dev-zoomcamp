@@ -30,16 +30,56 @@ description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp rep
   bash -ic 'cd /mnt/d/Projects/Github/ai-dev-zoomcamp; git push -u origin main'
   ```
 
+## Commit message and PR title conventions
+
+Every commit message and PR title in this repo MUST follow
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <short summary>
+
+<optional body — explain why, not what>
+```
+
+- **Types**: `feat` (new capability), `fix` (bug fix), `docs` (docs only),
+  `refactor` (restructuring, no behavior change), `test` (tests only),
+  `chore` (tooling/deps/config), `style` (formatting only), `perf`
+  (performance). Pick the one that matches the *primary* effect of the
+  change.
+- **Scope** is optional but encouraged when it adds clarity, e.g.
+  `feat(api):`, `fix(chores):`.
+- **Summary**: imperative mood ("add", not "added"/"adds"), lowercase
+  after the type, no trailing period, aim for under ~70 characters.
+- **Body**: blank line after the summary, then explain the *why* — the
+  diff itself already shows the *what*.
+- **Split unrelated changes into separate commits by type/concern**
+  rather than one large commit — e.g. a feature, an unrelated bugfix it
+  exposed, and a docs update are three commits (`feat: ...`, `fix: ...`,
+  `docs: ...`), not one. Don't over-split trivial, tightly-coupled
+  changes (e.g. a feature and the one-line test it needs).
+- PR titles follow the same `<type>(<scope>): <summary>` format as the
+  commit message.
+
+**Quoting gotcha**: never use an apostrophe or contraction (e.g.
+"caller's", "doesn't") in a commit message body when it will be passed
+through the `bash -ic '<command>'` wrapper below — the single-quoted
+wrapper terminates at the first `'` inside the message, silently
+truncating/corrupting the command. Reword around it (e.g. "the
+requesting user" instead of "the user's") rather than trying to escape
+the quote.
+
 ## Committing and pushing
 
 1. `bash -ic 'git status'` — review what changed before staging anything.
 2. Stage specific files by name (not `git add -A` / `git add .`) unless the
    user clearly wants everything staged.
-3. Commit with a concise message describing *why*, in a HEREDOC to avoid
-   quoting issues:
+3. Commit with a Conventional Commits message (see above), in a HEREDOC to
+   avoid quoting issues:
    ```
    bash -ic 'git commit -m "$(cat <<"EOF"
-   <message>
+   <type>(<scope>): <summary>
+
+   <body>
    EOF
    )"'
    ```
@@ -61,7 +101,8 @@ The token has full repository-wide access, so any `gh` subcommand works
 against this repo the same way, using the same `bash -ic '<command>'`
 wrapper for auth:
 
-- Pull requests: `gh pr create`, `gh pr merge`, `gh pr view`, etc.
+- Pull requests: `gh pr create`, `gh pr merge`, `gh pr view`, etc. — the
+  `--title` must follow the Conventional Commits format above.
 - Issues: `gh issue create`, `gh issue list`, etc.
 - Releases: `gh release create`, `gh release upload`, etc.
 - Actions / deploys: `gh workflow run <name>`, `gh run watch`, `gh run view`.
