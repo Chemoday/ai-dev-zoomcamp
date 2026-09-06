@@ -46,3 +46,18 @@ def assign_task(task, user):
     task.assignee = user
     task.save(update_fields=["assignee"])
     return task
+
+
+def can_manage_task(user, task) -> bool:
+    """Whether `user` may drop/block/unblock/complete this task.
+
+    The assignee owns a claimed task's lifecycle; an admin can always
+    override. An unclaimed task (no assignee) is fair game for any
+    household member. Relies on the invariant that a task only ever
+    gets an assignee via `assign_task`, so "assignee or admin" is
+    always the right gate once one is set.
+    """
+    household = task.zone.household
+    if task.assignee_id and task.assignee_id != user.id:
+        return is_admin(user, household)
+    return bool(get_membership(user, household))

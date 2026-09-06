@@ -175,7 +175,7 @@ class LifecycleTests(TestCase):
     def test_drop_task_returns_to_pool(self):
         task = Task.objects.create(zone=self.zone, title="Dishes")
         lifecycle.start_task(task, self.member_user)
-        lifecycle.drop_task(task)
+        lifecycle.drop_task(task, self.member_user)
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.TODO)
         self.assertIsNone(task.assignee)
@@ -183,12 +183,12 @@ class LifecycleTests(TestCase):
     def test_block_requires_reason(self):
         task = Task.objects.create(zone=self.zone, title="Dishes")
         with self.assertRaises(ValueError):
-            lifecycle.block_task(task, "")
+            lifecycle.block_task(task, self.member_user, "")
 
     def test_unblock_task_without_assignee_returns_to_todo(self):
         task = Task.objects.create(zone=self.zone, title="Dishes")
-        lifecycle.block_task(task, "No supplies")
-        lifecycle.unblock_task(task)
+        lifecycle.block_task(task, self.member_user, "No supplies")
+        lifecycle.unblock_task(task, self.member_user)
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.TODO)
         self.assertEqual(task.blocked_reason, "")
@@ -208,15 +208,81 @@ class LifecycleTests(TestCase):
     def test_block_and_unblock_cycle(self):
         task = Task.objects.create(zone=self.zone, title="Dishes")
         lifecycle.start_task(task, self.member_user)
-        lifecycle.block_task(task, "No hot water")
+        lifecycle.block_task(task, self.member_user, "No hot water")
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.BLOCKED)
         self.assertEqual(task.blocked_reason, "No hot water")
 
-        lifecycle.unblock_task(task)
+        lifecycle.unblock_task(task, self.member_user)
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.IN_PROGRESS)
         self.assertEqual(task.blocked_reason, "")
+
+    def test_drop_task_rejects_non_assignee(self):
+        other_member = User.objects.create(username="other")
+        Membership.objects.create(
+            user=other_member, household=self.household, role=Membership.Role.MEMBER
+        )
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        with self.assertRaises(permissions.PermissionDenied):
+            lifecycle.drop_task(task, other_member)
+
+    def test_drop_task_allows_admin_override(self):
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        lifecycle.drop_task(task, self.admin_user)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.TODO)
+        self.assertIsNone(task.assignee)
+
+    def test_block_task_rejects_non_assignee_when_assigned(self):
+        other_member = User.objects.create(username="other")
+        Membership.objects.create(
+            user=other_member, household=self.household, role=Membership.Role.MEMBER
+        )
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        with self.assertRaises(permissions.PermissionDenied):
+            lifecycle.block_task(task, other_member, "No supplies")
+
+    def test_block_task_allows_any_member_when_unassigned(self):
+        other_member = User.objects.create(username="other")
+        Membership.objects.create(
+            user=other_member, household=self.household, role=Membership.Role.MEMBER
+        )
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.block_task(task, other_member, "No supplies")
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.BLOCKED)
+
+    def test_unblock_task_rejects_non_assignee_when_assigned(self):
+        other_member = User.objects.create(username="other")
+        Membership.objects.create(
+            user=other_member, household=self.household, role=Membership.Role.MEMBER
+        )
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        lifecycle.block_task(task, self.member_user, "No hot water")
+        with self.assertRaises(permissions.PermissionDenied):
+            lifecycle.unblock_task(task, other_member)
+
+    def test_complete_task_rejects_non_assignee(self):
+        other_member = User.objects.create(username="other")
+        Membership.objects.create(
+            user=other_member, household=self.household, role=Membership.Role.MEMBER
+        )
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        with self.assertRaises(permissions.PermissionDenied):
+            lifecycle.complete_task(task, other_member)
+
+    def test_complete_task_allows_admin_override(self):
+        task = Task.objects.create(zone=self.zone, title="Dishes")
+        lifecycle.start_task(task, self.member_user)
+        lifecycle.complete_task(task, self.admin_user)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.DONE)
 
     def test_complete_without_approval_marks_done(self):
         task = Task.objects.create(zone=self.zone, title="Dishes")

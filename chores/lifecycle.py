@@ -31,8 +31,10 @@ def start_task(task, user):
     return task
 
 
-def drop_task(task):
+def drop_task(task, actor):
     """Release an accepted task back to the unassigned pool."""
+    if not permissions.can_manage_task(actor, task):
+        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
     if task.status != Task.Status.IN_PROGRESS:
         raise InvalidTransition(f"Cannot drop a task in status {task.status}")
     task.assignee = None
@@ -41,7 +43,9 @@ def drop_task(task):
     return task
 
 
-def block_task(task, reason: str):
+def block_task(task, actor, reason: str):
+    if not permissions.can_manage_task(actor, task):
+        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
     if not reason:
         raise ValueError("A reason is required to block a task")
     if task.status not in (Task.Status.TODO, Task.Status.IN_PROGRESS):
@@ -52,7 +56,9 @@ def block_task(task, reason: str):
     return task
 
 
-def unblock_task(task):
+def unblock_task(task, actor):
+    if not permissions.can_manage_task(actor, task):
+        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
     if task.status != Task.Status.BLOCKED:
         raise InvalidTransition(f"Cannot unblock a task in status {task.status}")
     task.status = Task.Status.IN_PROGRESS if task.assignee_id else Task.Status.TODO
@@ -68,6 +74,8 @@ def complete_task(task, actor):
     is left in IN_PROGRESS with `awaiting_approval=True` instead of
     being marked DONE outright — see `approve_task`.
     """
+    if not permissions.can_manage_task(actor, task):
+        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
     if task.status != Task.Status.IN_PROGRESS:
         raise InvalidTransition(f"Cannot complete a task in status {task.status}")
 
