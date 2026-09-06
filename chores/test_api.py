@@ -75,6 +75,44 @@ class HouseholdScopingTests(APITestCaseWithAuth):
         self.assertTrue(membership.is_admin)
 
 
+class MeAndUsersTests(APITestCaseWithAuth):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="alice", password="pw12345", email="alice@example.com"
+        )
+        self.housemate = User.objects.create_user(username="carol", password="pw12345")
+        self.outsider = User.objects.create_user(username="bob", password="pw12345")
+
+        self.household = Household.objects.create(name="Casa", mode=Household.Mode.P2P)
+        Membership.objects.create(
+            user=self.user, household=self.household, role=Membership.Role.MEMBER
+        )
+        Membership.objects.create(
+            user=self.housemate, household=self.household, role=Membership.Role.MEMBER
+        )
+
+        self.other_household = Household.objects.create(name="Other", mode=Household.Mode.P2P)
+        Membership.objects.create(
+            user=self.outsider, household=self.other_household, role=Membership.Role.MEMBER
+        )
+
+    def test_me_returns_own_identity(self):
+        self.authenticate(self.user)
+        response = self.client.get("/api/me/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.user.id)
+        self.assertEqual(response.data["username"], "alice")
+        self.assertEqual(response.data["email"], "alice@example.com")
+
+    def test_users_list_includes_housemate_but_not_outsider(self):
+        self.authenticate(self.user)
+        response = self.client.get("/api/users/")
+        usernames = {row["username"] for row in response.data}
+        self.assertIn("alice", usernames)
+        self.assertIn("carol", usernames)
+        self.assertNotIn("bob", usernames)
+
+
 class TaskLifecycleAPITests(APITestCaseWithAuth):
     def setUp(self):
         self.admin_user = User.objects.create_user(username="admin", password="pw12345")

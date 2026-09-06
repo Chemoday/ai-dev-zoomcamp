@@ -135,8 +135,22 @@ step — append, don't rewrite history.
     via `runserver` + `curl` to confirm the decorator/mixin behave
     identically at runtime.
 
+- Phase 8 (partial) — CI added: `.github/workflows/tests.yml` runs
+  `uv run python manage.py test` on every push/PR to `main`, plus a
+  status badge in `README.md`. Deployment target still not started.
+
+- API additions for frontend readiness (2026-09-07): while drafting
+  `_docs/frontend/pages-and-views.md`, found the API had no way to tell
+  the frontend who is logged in, or to resolve `assignee`/`Membership.
+  user`/`Zone.residents` IDs to display names. Added `GET /api/me/`
+  (returns the caller's own id/username/email) and `GET /api/users/`
+  (read-only, scoped to users who share a household with the caller,
+  returns id/username only — not exposed for non-household-mates).
+  2 new tests in `chores/test_api.py`; all 60 tests pass. Manually
+  smoke-tested both via `runserver` + `curl`.
+
 ## Not started
-- Phase 8 — Stretch: CI & deployment
+- Deployment target (rest of Phase 8)
 
 ## Notes / gotchas for future sessions
 

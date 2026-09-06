@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from . import permissions
@@ -7,6 +8,12 @@ from .models import Household, Membership, SubTask, Task, Zone
 def _require_membership(user, household):
     if not permissions.get_membership(user, household):
         raise serializers.ValidationError("You are not a member of this household.")
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username"]
 
 
 class HouseholdSerializer(serializers.ModelSerializer):

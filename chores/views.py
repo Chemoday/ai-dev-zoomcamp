@@ -1,8 +1,10 @@
 import functools
 
+from django.contrib.auth.models import User
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from . import lifecycle, permissions
 from .models import Household, Membership, SubTask, Task, Zone
@@ -11,8 +13,28 @@ from .serializers import (
     MembershipSerializer,
     SubTaskSerializer,
     TaskSerializer,
+    UserSerializer,
     ZoneSerializer,
 )
+
+
+class MeView(APIView):
+    def get(self, request):
+        user = request.user
+        return Response({"id": user.id, "username": user.username, "email": user.email})
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        household_ids = Membership.objects.filter(
+            user=self.request.user
+        ).values_list("household_id", flat=True)
+        co_member_ids = Membership.objects.filter(
+            household_id__in=household_ids
+        ).values_list("user_id", flat=True)
+        return User.objects.filter(id__in=co_member_ids)
 
 
 class HouseholdScopedMixin:
