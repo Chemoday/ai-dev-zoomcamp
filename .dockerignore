@@ -1,0 +1,16 @@
+.venv/
+.git/
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.claude/
+_docs/
+.obsidian/
+week_1/

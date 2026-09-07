@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: chores-app
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: DEMO_PASSWORD
+        sync: false
