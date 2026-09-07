@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from . import lifecycle, permissions
+from .errors import Errors
 from .models import Household, Membership, Task, Zone
 
 
@@ -99,8 +100,8 @@ class PermissionsTests(TestCase):
 
     def test_require_admin_raises_for_non_admin(self):
         with self.assertRaises(permissions.PermissionDenied):
-            permissions.require_admin(self.member_user, self.hierarchical)
-        permissions.require_admin(self.admin_user, self.hierarchical)  # no raise
+            Errors.Permission.require_admin(self.member_user, self.hierarchical)
+        Errors.Permission.require_admin(self.admin_user, self.hierarchical)  # no raise
 
     def test_hierarchical_household_honors_requires_approval(self):
         task = Task.objects.create(zone=self.zone, title="Chore", requires_approval=True)

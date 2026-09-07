@@ -1,13 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from . import permissions
+from .errors import Errors
 from .models import Household, Membership, SubTask, Task, Zone
-
-
-def _require_membership(user, household):
-    if not permissions.get_membership(user, household):
-        raise serializers.ValidationError("You are not a member of this household.")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -29,7 +24,7 @@ class MembershipSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "household", "role", "is_away"]
 
     def validate_household(self, household):
-        _require_membership(self.context["request"].user, household)
+        Errors.Membership.require_membership(self.context["request"].user, household)
         return household
 
     def validate(self, attrs):
@@ -37,11 +32,9 @@ class MembershipSerializer(serializers.ModelSerializer):
         if self.instance:
             household = self.instance.household
             if "role" in attrs and attrs["role"] != self.instance.role:
-                if not permissions.is_admin(request.user, household):
-                    raise serializers.ValidationError("Only an admin can change a member's role.")
+                Errors.Membership.require_admin_for_role_change(request.user, household)
             if "is_away" in attrs and request.user.id != self.instance.user_id:
-                if not permissions.is_admin(request.user, household):
-                    raise serializers.ValidationError("You can only change your own away status.")
+                Errors.Membership.require_admin_for_away_change(request.user, household)
         return attrs
 
 
@@ -51,7 +44,7 @@ class ZoneSerializer(serializers.ModelSerializer):
         fields = ["id", "household", "name", "is_shared", "residents"]
 
     def validate_household(self, household):
-        _require_membership(self.context["request"].user, household)
+        Errors.Membership.require_membership(self.context["request"].user, household)
         return household
 
 
@@ -61,7 +54,7 @@ class SubTaskSerializer(serializers.ModelSerializer):
         fields = ["id", "task", "title", "is_completed"]
 
     def validate_task(self, task):
-        _require_membership(self.context["request"].user, task.zone.household)
+        Errors.Membership.require_membership(self.context["request"].user, task.zone.household)
         return task
 
 
@@ -83,5 +76,5 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
 
     def validate_zone(self, zone):
-        _require_membership(self.context["request"].user, zone.household)
+        Errors.Membership.require_membership(self.context["request"].user, zone.household)
         return zone

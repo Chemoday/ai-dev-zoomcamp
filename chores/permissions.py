@@ -21,11 +21,6 @@ def is_admin(user, household) -> bool:
     return bool(membership and membership.is_admin)
 
 
-def require_admin(user, household):
-    if not is_admin(user, household):
-        raise PermissionDenied(f"{user} is not an admin of {household}")
-
-
 def task_requires_admin_approval(task) -> bool:
     """P2P households have equal permissions, so a task's own
     ``requires_approval`` flag is only honored in Hierarchical households.
@@ -40,9 +35,10 @@ def is_available_for_assignment(user, household) -> bool:
 
 
 def assign_task(task, user):
+    from .errors import Errors  # deferred: errors.py imports this module at load time
+
     household = task.zone.household
-    if not is_available_for_assignment(user, household):
-        raise PermissionDenied(f"{user} is away or not a member of {household}")
+    Errors.Permission.require_available(user, household)
     task.assignee = user
     task.save(update_fields=["assignee"])
     return task

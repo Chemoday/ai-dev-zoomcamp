@@ -10,11 +10,8 @@ from datetime import timedelta
 from django.utils import timezone
 
 from . import permissions
+from .errors import Errors, InvalidTransition
 from .models import Task
-
-
-class InvalidTransition(Exception):
-    pass
 
 
 def start_task(task, user):
@@ -23,8 +20,7 @@ def start_task(task, user):
     Only valid from TODO. Raises permissions.PermissionDenied if `user`
     is away or not a member of the task's household.
     """
-    if task.status != Task.Status.TODO:
-        raise InvalidTransition(f"Cannot start a task in status {task.status}")
+    Errors.Task.require_status(task, Task.Status.TODO, verb="start")
     permissions.assign_task(task, user)
     task.status = Task.Status.IN_PROGRESS
     task.save(update_fields=["status"])
@@ -33,10 +29,8 @@ def start_task(task, user):
 
 def drop_task(task, actor):
     """Release an accepted task back to the unassigned pool."""
-    if not permissions.can_manage_task(actor, task):
-        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
-    if task.status != Task.Status.IN_PROGRESS:
-        raise InvalidTransition(f"Cannot drop a task in status {task.status}")
+    Errors.Task.require_can_manage(actor, task)
+    Errors.Task.require_status(task, Task.Status.IN_PROGRESS, verb="drop")
     task.assignee = None
     task.status = Task.Status.TODO
     task.save(update_fields=["assignee", "status"])
@@ -44,12 +38,9 @@ def drop_task(task, actor):
 
 
 def block_task(task, actor, reason: str):
-    if not permissions.can_manage_task(actor, task):
-        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
-    if not reason:
-        raise ValueError("A reason is required to block a task")
-    if task.status not in (Task.Status.TODO, Task.Status.IN_PROGRESS):
-        raise InvalidTransition(f"Cannot block a task in status {task.status}")
+    Errors.Task.require_can_manage(actor, task)
+    Errors.Task.require_reason(reason)
+    Errors.Task.require_status(task, Task.Status.TODO, Task.Status.IN_PROGRESS, verb="block")
     task.status = Task.Status.BLOCKED
     task.blocked_reason = reason
     task.save(update_fields=["status", "blocked_reason"])
@@ -57,10 +48,8 @@ def block_task(task, actor, reason: str):
 
 
 def unblock_task(task, actor):
-    if not permissions.can_manage_task(actor, task):
-        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
-    if task.status != Task.Status.BLOCKED:
-        raise InvalidTransition(f"Cannot unblock a task in status {task.status}")
+    Errors.Task.require_can_manage(actor, task)
+    Errors.Task.require_status(task, Task.Status.BLOCKED, verb="unblock")
     task.status = Task.Status.IN_PROGRESS if task.assignee_id else Task.Status.TODO
     task.blocked_reason = ""
     task.save(update_fields=["status", "blocked_reason"])
@@ -74,10 +63,8 @@ def complete_task(task, actor):
     is left in IN_PROGRESS with `awaiting_approval=True` instead of
     being marked DONE outright — see `approve_task`.
     """
-    if not permissions.can_manage_task(actor, task):
-        raise permissions.PermissionDenied(f"{actor} cannot manage this task")
-    if task.status != Task.Status.IN_PROGRESS:
-        raise InvalidTransition(f"Cannot complete a task in status {task.status}")
+    Errors.Task.require_can_manage(actor, task)
+    Errors.Task.require_status(task, Task.Status.IN_PROGRESS, verb="complete")
 
     if permissions.task_requires_admin_approval(task):
         task.awaiting_approval = True
@@ -89,9 +76,8 @@ def complete_task(task, actor):
 
 def approve_task(task, admin_user):
     household = task.zone.household
-    permissions.require_admin(admin_user, household)
-    if not task.awaiting_approval:
-        raise InvalidTransition("Task is not awaiting approval")
+    Errors.Permission.require_admin(admin_user, household)
+    Errors.Task.require_awaiting_approval(task)
     return _mark_done(task)
 
 
