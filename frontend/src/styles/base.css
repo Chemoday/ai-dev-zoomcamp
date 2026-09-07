@@ -1,0 +1,9 @@
+/* The only global stylesheet beyond the design system: document-level resets
+   that cannot be scoped. Every component keeps its own styles in <style scoped>. */
+html, body, #app { min-height: 100%; }
+body { margin: 0; }
+#app { min-height: 100vh; }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-300); }
+.btn, .seg-opt, .tag { white-space: nowrap; }
+.router-link-active { color: var(--color-accent); }
