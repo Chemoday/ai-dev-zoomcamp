@@ -1,9 +1,20 @@
 ---
 name: ai-dev-zoomcamp-git-ops
-description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp-week-1 repo (Chemoday/ai-dev-zoomcamp-week-1) — commit/push, branches, pull requests, issues, releases, GitHub Actions runs/deploys, or repo settings. The configured token is scoped to this repo, so this skill is the entry point whenever the user asks to commit, push, sync, deploy, or otherwise manipulate this repo on GitHub.
+description: Use for ANY direct GitHub operation against this project's own GitHub repository — the one checked out at this project's root and pointed to by its `origin` remote — commit/push, branches, pull requests, issues, releases, GitHub Actions runs/deploys, or repo settings. Scoped strictly to that one repository; never target any other repo even if the configured token has broader access. This skill is the entry point whenever the user asks to commit, push, sync, deploy, or otherwise manipulate this repo on GitHub.
 ---
 
 # ai-dev-zoomcamp git ops
+
+## Scope
+
+This skill file is designed to be copied as-is into any sibling repo that
+follows this same course-project pattern (one repo per homework week). It
+must always operate on **the repository this copy lives in** — determined
+from this project's own `origin` remote and local checkout path, never
+from a hardcoded repo name, owner/repo string, or absolute path left over
+from another week's copy. If you find repo-specific text here that
+doesn't match `git remote get-url origin` for this checkout, treat it as
+stale and correct it before relying on it.
 
 ## Authentication
 
@@ -24,10 +35,13 @@ description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp-wee
 - Never print, echo, or otherwise include the raw token value in any
   command, file, or output.
 - The `bash -ic` subshell starts in `$HOME`, not the repo directory —
-  every command must `cd` back into the repo first, e.g.:
+  every command must `cd` back into this project's root first. Use the
+  actual local path of *this* checkout (the working directory shown in
+  your environment context) — never a hardcoded path copied from another
+  week's repo, e.g.:
 
   ```
-  bash -ic 'cd /mnt/d/Projects/Github/ai-dev-zoomcamp-week-1; git push -u origin main'
+  bash -ic 'cd /absolute/path/to/this/checkout; git push -u origin main'
   ```
 
 ## Commit message and PR title conventions
@@ -97,9 +111,11 @@ the quote.
 
 ## Other GitHub operations
 
-The token has full repository-wide access, so any `gh` subcommand works
-against this repo the same way, using the same `bash -ic '<command>'`
-wrapper for auth:
+The token is scoped to this repository, so any `gh` subcommand works
+against it the same way, using the same `bash -ic '<command>'` wrapper
+for auth. Run these from inside this project's directory so `gh` resolves
+the correct repo implicitly — don't pass an explicit `--repo`/`-R` flag
+pointing at a different repo:
 
 - Pull requests: `gh pr create`, `gh pr merge`, `gh pr view`, etc. — the
   `--title` must follow the Conventional Commits format above.
@@ -110,6 +126,10 @@ wrapper for auth:
 
 ## Safety rules
 
+- This skill only ever acts on the repository at this project's root (its
+  `origin` remote) — never `cd` into, or pass a `--repo`/`-R` flag
+  pointing at, a different week's repo, even though the configured token
+  may have access to more than one.
 - Never force-push (`--force` / `-f`) unless the user explicitly asks for it.
 - Confirm with the user before: pushing directly to `main`, deleting any
   branch (local or remote) or the repo itself, merging a PR, publishing a
@@ -117,7 +137,7 @@ wrapper for auth:
   or any other action visible outside this local checkout.
 - Only commit files the user would expect to be committed — flag anything
   that looks like a secret or credential before staging it.
-- Because this token is full-access, treat every write operation as
-  irreversible-until-proven-otherwise: state what you're about to do and
-  get explicit confirmation first, rather than assuming broad scope means
-  broad license to act unprompted.
+- Treat every write operation as irreversible-until-proven-otherwise:
+  state what you're about to do and get explicit confirmation first,
+  rather than assuming the token's scope means broad license to act
+  unprompted.
