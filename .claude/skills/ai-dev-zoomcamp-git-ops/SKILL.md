@@ -1,6 +1,6 @@
 ---
 name: ai-dev-zoomcamp-git-ops
-description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp repo (Chemoday/ai-dev-zoomcamp) — commit/push, branches, pull requests, issues, releases, GitHub Actions runs/deploys, or repo settings. The configured token has full repository-wide access, so this skill is the entry point whenever the user asks to commit, push, sync, deploy, or otherwise manipulate this repo on GitHub.
+description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp-week-1 repo (Chemoday/ai-dev-zoomcamp-week-1) — commit/push, branches, pull requests, issues, releases, GitHub Actions runs/deploys, or repo settings. The configured token is scoped to this repo, so this skill is the entry point whenever the user asks to commit, push, sync, deploy, or otherwise manipulate this repo on GitHub.
 ---
 
 # ai-dev-zoomcamp git ops
@@ -27,7 +27,7 @@ description: Use for ANY direct GitHub operation against the ai-dev-zoomcamp rep
   every command must `cd` back into the repo first, e.g.:
 
   ```
-  bash -ic 'cd /mnt/d/Projects/Github/ai-dev-zoomcamp; git push -u origin main'
+  bash -ic 'cd /mnt/d/Projects/Github/ai-dev-zoomcamp-week-1; git push -u origin main'
   ```
 
 ## Commit message and PR title conventions

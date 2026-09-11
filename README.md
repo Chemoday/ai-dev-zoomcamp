@@ -1,6 +1,6 @@
 # 🧹 Shared Household Chores Manager (Backend)
 
-[![Tests](https://github.com/Chemoday/ai-dev-zoomcamp/actions/workflows/tests.yml/badge.svg)](https://github.com/Chemoday/ai-dev-zoomcamp/actions/workflows/tests.yml)
+[![Tests](https://github.com/Chemoday/ai-dev-zoomcamp-week-1/actions/workflows/tests.yml/badge.svg)](https://github.com/Chemoday/ai-dev-zoomcamp-week-1/actions/workflows/tests.yml)
 
 A Django-based backend service designed to manage shared household chores and responsibilities. Built to support dormitories, student shared flats, and family apartments through a flexible space-zoning and governance model.
 

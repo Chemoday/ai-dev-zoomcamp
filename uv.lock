@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [[package]]
-name = "ai-dev-zoomcamp"
+name = "ai-dev-zoomcamp-week-1"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

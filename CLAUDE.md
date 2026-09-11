@@ -1,6 +1,6 @@
-# ai-dev-zoomcamp
+# ai-dev-zoomcamp-week-1
 
-GitHub repo: https://github.com/Chemoday/ai-dev-zoomcamp
+GitHub repo: https://github.com/Chemoday/ai-dev-zoomcamp-week-1
 
 ## GitHub operations
 
